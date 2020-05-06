@@ -46,7 +46,7 @@ class RepeatDataset(object):
         if hasattr(self.dataset, 'flag'):
             self.flag = np.tile(self.dataset.flag, times)
 
-        self._ori_len = len(self.dataset)
+        self._ori_len = len(self.dataset)//3
 
     def __getitem__(self, idx):
         return self.dataset[idx % self._ori_len]

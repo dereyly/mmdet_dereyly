@@ -8,6 +8,29 @@ from mmdet.core import eval_map, eval_recalls
 from .pipelines import Compose
 from .registry import DATASETS
 
+is_vis = False
+is_dbg = False
+if is_vis:
+    import shutil
+    import os
+    import cv2
+    dir_dbg = '/media/dereyly/data/ImageDB/dbg/'
+    shutil.rmtree(dir_dbg, ignore_errors=True)
+    os.makedirs(dir_dbg, exist_ok=True)
+
+
+def get_bboox_mask(mask,optimize_coef=4):
+
+    sz=mask.shape
+    sz_new=(sz[1]//optimize_coef,sz[0]//optimize_coef)
+    mask=mmcv.imresize(mask, sz_new, return_scale=False, interpolation='bilinear')
+    where = np.array(np.where(mask))
+    # if where.shape[1]<400/optimize_coef**2:
+    #     return None
+    x1, y1 = np.amin(where, axis=1)*optimize_coef
+    x2, y2 = np.amax(where, axis=1)*optimize_coef
+
+    return [y1,x1,y2,x2]
 
 @DATASETS.register_module
 class CustomDataset(Dataset):
@@ -82,7 +105,7 @@ class CustomDataset(Dataset):
         self.pipeline = Compose(pipeline)
 
     def __len__(self):
-        return len(self.img_infos)
+        return len(self.img_infos)//3
 
     def load_annotations(self, ann_file):
         return mmcv.load(ann_file)
@@ -115,8 +138,8 @@ class CustomDataset(Dataset):
         Images with aspect ratio greater than 1 will be set as group 1,
         otherwise group 0.
         """
-        self.flag = np.zeros(len(self), dtype=np.uint8)
-        for i in range(len(self)):
+        self.flag = np.zeros(len(self.img_infos), dtype=np.uint8)
+        for i in range(len(self.img_infos)):
             img_info = self.img_infos[i]
             if img_info['width'] / img_info['height'] > 1:
                 self.flag[i] = 1
@@ -130,9 +153,47 @@ class CustomDataset(Dataset):
             return self.prepare_test_img(idx)
         while True:
             data = self.prepare_train_img(idx)
+            if data is None and np.random:
+                idx = self._rand_another(idx)
+                continue
             if data is None:
                 idx = self._rand_another(idx)
                 continue
+            if self.test_mode:
+                data['img'] = [data['img'].data]
+                data['img_meta'].data['idx'] = idx
+                data['img_meta'] = [data['img_meta']]
+                data['gt_bboxes'] = data['gt_bboxes'].data
+                data['gt_labels'] = data['gt_labels'].data
+                data['gt_masks'] = data['gt_masks'].data
+                # except:
+                #     print(idx,data['img_meta'].data['filename'])
+                #     zz=0
+            if is_vis:
+                img = data['img'].data.numpy()
+                gt_bboxes = data['gt_bboxes'].data.numpy()
+                gt_labels = data['gt_labels'].data.numpy()
+                if 'gt_masks' in data:
+                    gt_masks = data['gt_masks'].data
+                name = data['img_meta'].data['filename']
+                im = np.transpose((img + 1) * 128, (1, 2, 0))[:, :, ::-1].copy()
+                # str_dbg = ''
+                for k, bb in enumerate(gt_bboxes):
+                    # if gt_labels[k] != 3:
+                    #     continue
+                    bb = bb.astype(int)
+                    cv2.rectangle(im, (bb[0], bb[1]), (bb[2], bb[3]), (255, 0, 0), 1)
+                    cv2.putText(im, '%d -- %d' % (k, gt_labels[k]), (bb[0], bb[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                                (0, 255, 0))
+
+                    if 'gt_masks' in data:
+                        mask = gt_masks[k].astype(np.bool)
+                        color_mask = np.random.randint(0, 256, (1, 3), dtype=np.uint8)
+                        im[mask] = im[mask] * 0.35 + color_mask * 0.65
+                # print(img_info['filename'],str_dbg)
+                imname = dir_dbg + name.split('/')[-1]
+                # print('vis',imname, gt_bboxes,im.shape)
+                cv2.imwrite(imname, im)
             return data
 
     def prepare_train_img(self, idx):
@@ -184,7 +245,7 @@ class CustomDataset(Dataset):
         allowed_metrics = ['mAP', 'recall']
         if metric not in allowed_metrics:
             raise KeyError('metric {} is not supported'.format(metric))
-        annotations = [self.get_ann_info(i) for i in range(len(self))]
+        annotations = [self.get_ann_info(i) for i in range(len(self.img_infos))]
         eval_results = {}
         if metric == 'mAP':
             assert isinstance(iou_thr, float)
