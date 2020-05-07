@@ -75,9 +75,12 @@ def delta2bbox(rois,
                 [0.0000, 0.6321, 7.3891, 0.3679],
                 [5.8967, 2.9251, 5.5033, 3.2749]])
     """
-    means = deltas.new_tensor(means).repeat(1, deltas.size(1) // 4)
-    stds = deltas.new_tensor(stds).repeat(1, deltas.size(1) // 4)
-    denorm_deltas = deltas * stds + means
+    if np.all(means==0) and np.all(stds==1):
+        means = deltas.new_tensor(means).repeat(1, deltas.size(1) // 4)
+        stds = deltas.new_tensor(stds).repeat(1, deltas.size(1) // 4)
+        denorm_deltas = deltas * stds + means
+    else:
+        denorm_deltas=deltas
     dx = denorm_deltas[:, 0::4]
     dy = denorm_deltas[:, 1::4]
     dw = denorm_deltas[:, 2::4]

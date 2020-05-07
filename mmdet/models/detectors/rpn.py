@@ -53,7 +53,7 @@ class RPN(BaseDetector, RPNTestMixin):
 
         x = self.extract_feat(img)
         rpn_outs = self.rpn_head(x)
-
+        # proposal_list = self.simple_test_rpn(x, img_meta, self.test_cfg.rpn)
         rpn_loss_inputs = rpn_outs + (gt_bboxes, img_meta, self.train_cfg.rpn)
         losses = self.rpn_head.loss(
             *rpn_loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)

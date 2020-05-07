@@ -174,7 +174,11 @@ class AnchorHead(nn.Module):
 
         anchor_list, valid_flag_list = self.get_anchors(
             featmap_sizes, img_metas, device=device)
+        anchor_list0=anchor_list.copy()
+        valid_flag_list0=valid_flag_list.copy()
         label_channels = self.cls_out_channels if self.use_sigmoid_cls else 1
+
+        cfg['sampler']['pos_fraction']=0.5
         cls_reg_targets = anchor_target(
             anchor_list,
             valid_flag_list,
@@ -203,6 +207,50 @@ class AnchorHead(nn.Module):
             bbox_weights_list,
             num_total_samples=num_total_samples,
             cfg=cfg)
+        if 1:
+            lvls=len(anchor_list0)
+            bboxes_lst=[[] for k in range(lvls)]
+            for z in range(lvls):
+                for k in range(len(anchor_list0[z])):
+                    bbox_pred = bbox_preds[k][z].permute(1, 2, 0).reshape(-1, 4)
+                    a=anchor_list0[z][k]
+                    # print(a.shape,bbox_pred.shape)
+                    bboxes = delta2bbox(anchor_list0[z][k], bbox_pred, self.target_means,
+                                        self.target_stds)
+                    bboxes_lst[z].append(bboxes.clone())
+                    zz=0
+            # label_channels = self.cls_out_channels if self.use_sigmoid_cls else 1
+            cfg['sampler']['pos_fraction'] = 0.55
+            cls_reg_targets = anchor_target(
+                bboxes_lst,
+                valid_flag_list0,
+                gt_bboxes,
+                img_metas,
+                self.target_means,
+                self.target_stds,
+                cfg,
+                gt_bboxes_ignore_list=gt_bboxes_ignore,
+                gt_labels_list=gt_labels,
+                label_channels=label_channels,
+                sampling=self.sampling)
+            if cls_reg_targets is None:
+                return None
+            (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list,
+             num_total_pos, num_total_neg) = cls_reg_targets
+            num_total_samples = (
+                num_total_pos + num_total_neg if self.sampling else num_total_pos)
+            losses_cls2, losses_bbox2 = multi_apply(
+                self.loss_single,
+                cls_scores,
+                bbox_preds,
+                labels_list,
+                label_weights_list,
+                bbox_targets_list,
+                bbox_weights_list,
+                num_total_samples=num_total_samples,
+                cfg=cfg)
+            for k in range(lvls):
+                losses_cls[k]=losses_cls[k]/2+losses_cls2[k]/2
         return dict(loss_cls=losses_cls, loss_bbox=losses_bbox)
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds'))
@@ -271,6 +319,13 @@ class AnchorHead(nn.Module):
             ]
             img_shape = img_metas[img_id]['img_shape']
             scale_factor = img_metas[img_id]['scale_factor']
+            if 0:
+                for k in range(len(mlvl_anchors)):
+                    bbox_pred = bbox_pred_list[k].permute(1, 2, 0).reshape(-1, 4)
+                    bboxes = delta2bbox(mlvl_anchors[k], bbox_pred, self.target_means,
+                                    self.target_stds, img_shape)
+
+                    zz=0
             proposals = self.get_bboxes_single(cls_score_list, bbox_pred_list,
                                                mlvl_anchors, img_shape,
                                                scale_factor, cfg, rescale)
