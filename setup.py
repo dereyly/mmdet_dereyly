@@ -240,7 +240,7 @@ if __name__ == '__main__':
                 sources=[
                     'src/roi_align_cuda.cpp',
                     'src/roi_align_kernel.cu',
-                    'src/roi_align_kernel_v2.cu',
+                    # 'src/roi_align_kernel_v2.cu',
                 ]),
             make_cuda_ext(
                 name='roi_pool_cuda',
