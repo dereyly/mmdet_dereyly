@@ -105,7 +105,7 @@ class CustomDataset(Dataset):
         self.pipeline = Compose(pipeline)
 
     def __len__(self):
-        return len(self.img_infos)//3
+        return len(self.img_infos)
 
     def load_annotations(self, ann_file):
         return mmcv.load(ann_file)
