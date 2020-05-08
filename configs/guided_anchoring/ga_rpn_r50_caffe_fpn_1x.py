@@ -153,6 +153,6 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/ga_rpn_r50_caffe_fpn_1x'
-load_from = None
+load_from = '/media/dereyly/data/models/COCO/mmdet_pret/ga_rpn_r50_caffe_fpn_1x_20190513-95e91886.pth'
 resume_from = None
 workflow = [('train', 1)]

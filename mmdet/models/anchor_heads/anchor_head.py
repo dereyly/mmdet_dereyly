@@ -220,7 +220,7 @@ class AnchorHead(nn.Module):
                     bboxes_lst[z].append(bboxes.clone())
                     zz=0
             # label_channels = self.cls_out_channels if self.use_sigmoid_cls else 1
-            cfg['sampler']['pos_fraction'] = 0.55
+            cfg['sampler']['pos_fraction'] = 0.55 #0.55
             cls_reg_targets = anchor_target(
                 bboxes_lst,
                 valid_flag_list0,
