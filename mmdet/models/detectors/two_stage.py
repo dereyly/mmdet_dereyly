@@ -45,7 +45,13 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin,
             self.bbox_roi_extractor = builder.build_roi_extractor(
                 bbox_roi_extractor)
             self.bbox_head = builder.build_head(bbox_head)
-            self.use_TSD = 'TSD' in bbox_head['type']
+            # if len(self.bbox_head)==1:
+            try:
+                self.use_TSD = 'TSD' in bbox_head['type']
+            except:
+                self.use_TSD=False
+            # else:
+            #     self.use_TSD=False
 
         if mask_head is not None:
             if mask_roi_extractor is not None:

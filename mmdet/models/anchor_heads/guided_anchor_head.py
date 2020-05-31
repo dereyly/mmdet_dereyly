@@ -507,7 +507,7 @@ class GuidedAnchorHead(AnchorHead):
                 anchor_weights_list[i],
                 anchor_total_num=anchor_total_num)
             losses_shape.append(loss_shape)
-        if 1:
+        if 0:
             # get sampled approxes
             approxs_list, inside_flag_list = self.get_sampled_approxs(
                 featmap_sizes, img_metas, cfg, device=device)

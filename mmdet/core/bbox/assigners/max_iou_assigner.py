@@ -109,7 +109,8 @@ class MaxIoUAssigner(BaseAssigner):
                     gt_bboxes_ignore, bboxes, mode='iof')
                 ignore_max_overlaps, _ = ignore_overlaps.max(dim=0)
             overlaps[:, ignore_max_overlaps > self.ignore_iof_thr] = -1
-
+        if bboxes.shape[0]<1000:
+            overlaps[overlaps==1]=0
         assign_result = self.assign_wrt_overlaps(overlaps, gt_labels)
         if assign_on_cpu:
             assign_result.gt_inds = assign_result.gt_inds.to(device)

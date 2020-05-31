@@ -110,6 +110,15 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
                     name, type(var)))
 
         num_augs = len(imgs)
+        if num_augs ==2 and img_metas[1][0]['flip']:
+            imgs=imgs[1]
+            img_metas= img_metas[1]
+            # img_metas[0][0]['flip']=False
+            # num_augs=1
+            results=self.simple_test(imgs, img_metas, **kwargs)
+            # for  res in results:
+            #     res[:,[0,2]]=img_metas[0]['img_shape'][1]-res[:,[0,2]]
+            return results
         if num_augs != len(img_metas):
             raise ValueError(
                 'num of augmentations ({}) != num of image meta ({})'.format(
