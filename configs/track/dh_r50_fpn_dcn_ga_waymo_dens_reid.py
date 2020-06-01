@@ -200,16 +200,17 @@ data = dict(
 # optimizer
 optimizer = dict(
     type='Adam',
-    lr=.00001
+    lr=.0001
 )
 optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=3600,
+    gamma=0.25,
+    warmup_iters=500,
     warmup_ratio=1.0 / 32,
-    step=[1, 4])
+    step=[5, 8])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -220,10 +221,10 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 4
+total_epochs = 8
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = '/media/dereyly/data/models/waymo/denc_reid'
-load_from = '/media/dereyly/data/models/waymo/epoch_5_v1.pth'
+work_dir = '/media/dereyly/data/models/waymo/denc_reid2'
+load_from = '/media/dereyly/data/models/waymo/denc_reid/epoch_2.pth'
 resume_from = None
 workflow = [('train', 1)]

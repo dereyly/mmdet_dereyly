@@ -362,13 +362,14 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin,
             det_bboxes, det_labels = self.tsd_simple_test_bboxes(
                 x, img_metas, proposal_list, self.test_cfg.rcnn, rescale=rescale)
         else:
-            det_bboxes, det_labels = self.simple_test_bboxes(
+            result = self.simple_test_bboxes(
                 x, img_metas, proposal_list, self.test_cfg.rcnn, rescale=rescale)
+        det_bboxes, det_labels = result[:2]
         bbox_results = bbox2result(det_bboxes, det_labels,
                                    self.bbox_head.num_classes)
 
         if not self.with_mask:
-            return bbox_results
+            return bbox_results, result[2:]
         else:
             segm_results = self.simple_test_mask(
                 x, img_metas, det_bboxes, det_labels, rescale=rescale)

@@ -12,10 +12,11 @@ class DoubleHeadReID(TwoStageDetector):
         super().__init__(**kwargs)
         self.reg_roi_scale_factor = reg_roi_scale_factor
         self.dens_coef=0.2
-        self.embed_coef_id = 0.5
+        self.embed_coef_id = 0.8
         self.embed_coef_cls = 0.2
         self.num_pairs = 50
         self.criterion_emb=torch.nn.CosineEmbeddingLoss(margin=0.3)
+        self.criterion_dens=torch.nn.CrossEntropyLoss()
 
     def forward_dummy(self, img):
         outs = ()
@@ -112,7 +113,7 @@ class DoubleHeadReID(TwoStageDetector):
             if self.with_shared_head:
                 #bbox_cls_feats = self.shared_head(bbox_cls_feats)
                 bbox_reg_feats = self.shared_head(bbox_reg_feats)
-            cls_score, bbox_pred, embed, dens = self.bbox_head(bbox_cls_feats,
+            cls_score, bbox_pred, embed, dens, dens_bin, cls_v2 = self.bbox_head(bbox_cls_feats,
                                                   bbox_reg_feats)
 
             bbox_targets = self.bbox_head.get_target(sampling_results,
@@ -122,6 +123,13 @@ class DoubleHeadReID(TwoStageDetector):
             loss_bbox = self.bbox_head.loss(cls_score, bbox_pred,
                                             *bbox_targets)
             if 1:
+                loss_boxx_tmp=self.bbox_head.loss(cls_v2, bbox_pred,
+                                                *bbox_targets)
+                loss_bbox['loss_cls_v2']=0.05*loss_boxx_tmp['loss_cls']
+            if 1:
+                # embed=embed.to(torch.device('cuda:0'))
+                loss_dens=torch.cuda.FloatTensor([0],device=dens.device) #.to(torch.device('cuda:0'))
+                loss_dens2 = torch.cuda.FloatTensor([0],device=dens_bin.device)
                 dens=dens.view(-1)
                 dens_target=torch.zeros_like(dens)
                 dim=sampling_results[0].bboxes.shape[0]
@@ -129,15 +137,19 @@ class DoubleHeadReID(TwoStageDetector):
                 for i in range(num_imgs):
                     npos=sampling_results[i].pos_assigned_gt_inds.shape[0]
                     dens_t = dens_targets[i][sampling_results[i].pos_assigned_gt_inds]
-                    dens_target[i*dim:i*dim+npos]=dens_t
-                    num_pos+=npos
-                loss_dens = torch.abs(dens - dens_target)
-                loss_dens = self.dens_coef*loss_dens.sum() / num_imgs / num_pos
+                    # dens_target[i*dim:i*dim+npos]=dens_t
+                    # num_pos+=npos
+                    loss_dens = torch.abs(dens[i*dim:i*dim+npos] - dens_t)
+                    loss_dens += self.dens_coef*loss_dens.sum() / num_imgs / npos
+                    loss_dens2 += self.criterion_dens(dens_bin[i*dim:i*dim+npos],(dens_t>0.1).type(torch.long))
+                # loss_dens = torch.abs(dens - dens_target)
+                # loss_dens = self.dens_coef*loss_dens.sum() / num_imgs / num_pos
                 loss_bbox['loss_dens'] = loss_dens
+                loss_bbox['loss_dens2'] = loss_dens2
             if 1:
                 dim = sampling_results[0].bboxes.shape[0]
-                loss_emb_id = torch.cuda.FloatTensor([0])
-                loss_emb_cls = torch.cuda.FloatTensor([0])
+                loss_emb_id = torch.cuda.FloatTensor([0], device=embed.device)#.to(torch.device('cuda:0'))
+                loss_emb_cls = torch.cuda.FloatTensor([0], device=embed.device)#.to(torch.device('cuda:0'))
                 for i in range(num_imgs):
                     pos = sampling_results[i].pos_assigned_gt_inds
                     npos = pos.shape[0]
@@ -168,10 +180,10 @@ class DoubleHeadReID(TwoStageDetector):
                             ix2c = ix2[ixx]
                             pairs.append([id1, ix2c])
                             pairs_lbl.append(-1)
-                    pairs_t = torch.tensor(pairs,dtype=torch.long,device=embed.device)
-                    pairs_lbl_t = torch.tensor(pairs_lbl,dtype=torch.long,device=embed.device)
-                    if (pairs_lbl_t==1).sum()>5 and (pairs_lbl_t==-1).sum()>5:
-                        loss_emb_id+= self.criterion_emb(embed[pairs_t[:,0]],embed[pairs_t[:,1]],pairs_lbl_t)
+                    pairs_t1 = torch.tensor(pairs,dtype=torch.long,device=embed.device)
+                    pairs_lbl_t1 = torch.tensor(pairs_lbl,dtype=torch.long,device=embed.device)
+                    if (pairs_lbl_t1==1).sum()>5 and (pairs_lbl_t1==-1).sum()>5:
+                        loss_emb_id+= self.criterion_emb(embed[pairs_t1[:,0]],embed[pairs_t1[:,1]],pairs_lbl_t1)
 
                     pos_lbl = sampling_results[i].pos_gt_labels
                     pairs = []
@@ -191,17 +203,18 @@ class DoubleHeadReID(TwoStageDetector):
                             ix2c = ix2[ixx]
                             pairs.append([id1, ix2c])
                             pairs_lbl.append(-1)
-                        ix3c = torch.randint(npos+1, dim, (1,))[0]
-                        pairs.append([id1, ix3c])
-                        pairs_lbl.append(-1)
-                    pairs_t = torch.tensor(pairs, dtype=torch.long, device=embed.device)
-                    pairs_lbl_t = torch.tensor(pairs_lbl, dtype=torch.long, device=embed.device)
-                    if (pairs_lbl_t == 1).sum() > 5:
-                        loss_emb_cls += self.criterion_emb(embed[pairs_t[:, 0]], embed[pairs_t[:, 1]], pairs_lbl_t)
+                        if len(ix1) > 0:
+                            ix3c = torch.randint(npos+1, dim, (1,))[0]
+                            pairs.append([id1, ix3c])
+                            pairs_lbl.append(-1)
+                    pairs_t2 = torch.tensor(pairs, dtype=torch.long, device=embed.device)
+                    pairs_lbl_t2 = torch.tensor(pairs_lbl, dtype=torch.long, device=embed.device)
+                    if (pairs_lbl_t2 == 1).sum() > 5:
+                        loss_emb_cls += self.criterion_emb(embed[pairs_t2[:, 0]], embed[pairs_t2[:, 1]], pairs_lbl_t2)
 
-                    loss_bbox['loss_emb_id'] = self.embed_coef_id * loss_emb_id
-                    loss_bbox['loss_emb_cls'] = self.embed_coef_cls * loss_emb_cls
-                    zz=0
+                loss_bbox['loss_emb_id'] = self.embed_coef_id * loss_emb_id
+                loss_bbox['loss_emb_cls'] = self.embed_coef_cls * loss_emb_cls
+                zz=0
                 zz=0
             losses.update(loss_bbox)
         return losses
@@ -221,17 +234,17 @@ class DoubleHeadReID(TwoStageDetector):
             rois,
             roi_scale_factor=self.reg_roi_scale_factor)
         if self.with_shared_head:
-            bbox_cls_feats = self.shared_head(bbox_cls_feats)
+            # bbox_cls_feats = self.shared_head(bbox_cls_feats)
             bbox_reg_feats = self.shared_head(bbox_reg_feats)
-        cls_score, bbox_pred = self.bbox_head(bbox_cls_feats, bbox_reg_feats)
+        cls_score, bbox_pred, embed, dens, dens_bin, cls_v2  = self.bbox_head(bbox_cls_feats, bbox_reg_feats)
         img_shape = img_metas[0]['img_shape']
         scale_factor = img_metas[0]['scale_factor']
         det_bboxes, det_labels = self.bbox_head.get_det_bboxes(
             rois,
-            cls_score,
+            cls_v2,
             bbox_pred,
             img_shape,
             scale_factor,
             rescale=rescale,
             cfg=rcnn_test_cfg)
-        return det_bboxes, det_labels
+        return det_bboxes, det_labels, dens_bin, dens, embed
