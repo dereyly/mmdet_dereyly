@@ -234,17 +234,17 @@ class DoubleHeadReID(TwoStageDetector):
             rois,
             roi_scale_factor=self.reg_roi_scale_factor)
         if self.with_shared_head:
-            bbox_cls_feats = self.shared_head(bbox_cls_feats)
+            # bbox_cls_feats = self.shared_head(bbox_cls_feats)
             bbox_reg_feats = self.shared_head(bbox_reg_feats)
-        cls_score, bbox_pred = self.bbox_head(bbox_cls_feats, bbox_reg_feats)
+        cls_score, bbox_pred, embed, dens, dens_bin, cls_v2  = self.bbox_head(bbox_cls_feats, bbox_reg_feats)
         img_shape = img_metas[0]['img_shape']
         scale_factor = img_metas[0]['scale_factor']
         det_bboxes, det_labels = self.bbox_head.get_det_bboxes(
             rois,
-            cls_score,
+            cls_v2,
             bbox_pred,
             img_shape,
             scale_factor,
             rescale=rescale,
             cfg=rcnn_test_cfg)
-        return det_bboxes, det_labels
+        return det_bboxes, det_labels, dens_bin, dens, embed

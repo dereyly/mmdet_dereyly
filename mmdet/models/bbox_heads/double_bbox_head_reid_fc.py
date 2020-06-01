@@ -161,6 +161,10 @@ class DoubleConvFCBBoxHeadReIdFC(BBoxHead):
             x_fc = self.relu(fc(x_fc))
 
         embed = self.reid(x_fc)
+<<<<<<< HEAD
+=======
+        embed = self.relu(embed)
+>>>>>>> 93f361151eedcf14d433eea4f9bed254113fe3fb
         x_pre=self.pre_fc_cls2(embed)
         x_pre=self.relu(x_pre)
         cls_v2=self.fc_cls2(x_pre)

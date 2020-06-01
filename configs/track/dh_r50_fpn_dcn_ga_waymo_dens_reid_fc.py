@@ -191,11 +191,12 @@ data = dict(
         type=dataset_type,
         # ann_file=data_root + '_val/annotations/val_small_rnd.json',
         # img_prefix=data_root + '_val/images/',
-        ann_file='/media/dereyly/data_ssd/ImageDB/waymo_v2/val/annotations/val_small_rnd3.json',
+
+        ann_file='/media/dereyly/data_ssd/ImageDB/waymo_v2/val/annotations/val_car2.json',
         img_prefix='/media/dereyly/data_ssd/ImageDB/waymo_v2/val/images/',
         pipeline=test_pipeline))
 # # optimizer
-# optimizer = dict(type='SGD', lr=0.003, momentum=0.9, weight_decay=0.0001)
+# optimizer = dict(type='SGD', lr=0.00003, momentum=0.9, weight_decay=0.0001)
 # optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # optimizer
 optimizer = dict(
@@ -210,7 +211,7 @@ lr_config = dict(
     gamma=0.25,
     warmup_iters=500,
     warmup_ratio=1.0 / 32,
-    step=[5, 8])
+    step=[1, 3, 6])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -221,10 +222,11 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
+
 total_epochs = 8
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = '/media/dereyly/data/models/waymo/denc_reid_fc'
 load_from = '/media/dereyly/data/models/waymo/faster r2_50_ga_dcn_1.pth'
 resume_from = None
-workflow = [('train', 1)]
+
