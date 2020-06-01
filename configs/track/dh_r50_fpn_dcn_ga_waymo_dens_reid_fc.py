@@ -56,9 +56,9 @@ model = dict(
         roi_layer=dict(type='RoIAlign', out_size=7, sample_num=2),
         out_channels=256,
         featmap_strides=[4, 8, 16, 32]),
-    reg_roi_scale_factor=1.3,
+    reg_roi_scale_factor=1.2,
     bbox_head=dict(
-        type='DoubleConvFCBBoxHeadReId',
+        type='DoubleConvFCBBoxHeadReIdFC',
         num_convs=4,
         num_fcs=2,
         in_channels=256,
@@ -72,8 +72,8 @@ model = dict(
         norm_cfg=norm_cfg,
         reg_class_agnostic=False,
         loss_cls=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=2.0),
-        loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=2.0)))
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+        loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)))
 # model training and testing settings
 train_cfg = dict(
     rpn=dict(
@@ -224,7 +224,7 @@ log_config = dict(
 total_epochs = 8
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = '/media/dereyly/data/models/waymo/denc_reid2'
-load_from = '/media/dereyly/data/models/waymo/denc_reid/epoch_2.pth'
+work_dir = '/media/dereyly/data/models/waymo/denc_reid_fc'
+load_from = '/media/dereyly/data/models/waymo/faster r2_50_ga_dcn_1.pth'
 resume_from = None
 workflow = [('train', 1)]
