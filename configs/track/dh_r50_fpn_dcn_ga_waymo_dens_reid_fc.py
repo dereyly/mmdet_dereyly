@@ -191,9 +191,9 @@ data = dict(
         type=dataset_type,
         # ann_file=data_root + '_val/annotations/val_small_rnd.json',
         # img_prefix=data_root + '_val/images/',
-
-        ann_file='/media/dereyly/data_ssd/ImageDB/waymo_v2/val/annotations/val_car2.json',
-        img_prefix='/media/dereyly/data_ssd/ImageDB/waymo_v2/val/images/',
+        proposal_file = '/media/dereyly/ssd_big/ImageDB/waymo/res_dbg/small2_nosoft.pkl',
+        ann_file='/media/dereyly/ssd_big/ImageDB/waymo_full/annotations/val_car2.json',
+        img_prefix='/media/dereyly/ssd_big/ImageDB/waymo_val_full/images/',
         pipeline=test_pipeline))
 # # optimizer
 # optimizer = dict(type='SGD', lr=0.00003, momentum=0.9, weight_decay=0.0001)
